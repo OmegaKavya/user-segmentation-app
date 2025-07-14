@@ -48,12 +48,17 @@ col3.metric("Avg Conversion", f"{filtered_df['Conversion Rates'].mean():.2%}")
 # ---------- Segment Distribution ----------
 st.markdown("### \U0001F4CA Segment Distribution")
 segment_counts = filtered_df['Segment_Name'].value_counts()
+seg_df = pd.DataFrame({
+    "Segment": segment_counts.index,
+    "User Count": segment_counts.values
+})
 fig1 = px.bar(
-    x=segment_counts.index,
-    y=segment_counts.values,
-    labels={'x': 'Segment', 'y': 'User Count'},
+    seg_df,
+    x="segment",
+    y="User Count",
+    color="Segment",
     title="Segment Distribution",
-    color=segment_counts.index,
+    hover_data=["Segment", "User Count"],
     color_discrete_sequence=px.colors.qualitative.Set2
 )
 st.plotly_chart(fig1, use_container_width=True)
@@ -71,6 +76,7 @@ fig2 = px.line(
     markers=True,
     labels={"value": "Avg Hours", "Segment_Name": "Segment", "variable": "Day Type"},
     title="Engagement Patterns"
+    hover_data=["Segment_Name", "variable", "value"]
 )
 st.plotly_chart(fig2, use_container_width=True)
 
@@ -87,6 +93,7 @@ fig3 = px.area(
     markers=True,
     labels={"value": "Rate", "Segment_Name": "Segment", "variable": "Metric"},
     title="CTR & Conversion Rates"
+    hover_data=["Segment_Name", "variable", "value"]
 )
 st.plotly_chart(fig3, use_container_width=True)
 
@@ -102,6 +109,7 @@ fig4 = px.bar(
     barmode="group",
     title="Income Distribution",
     labels={"Segment_Name": "Segment"}
+    hover_data=["Segment_Name", "Income Level", "User Count"]
 )
 st.plotly_chart(fig4, use_container_width=True)
 
@@ -115,6 +123,7 @@ fig5 = px.imshow(
     labels=dict(x="Metrics", y="Segment", color="Value"),
     color_continuous_scale="YlGnBu",
     title="Segment Metric Heatmap"
+    text_auto=".2f"
 )
 st.plotly_chart(fig5, use_container_width=True)
 
