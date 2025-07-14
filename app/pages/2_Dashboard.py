@@ -1,80 +1,118 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
 from PIL import Image
 
+# ---------- Sidebar Logo & Title ----------
 logo = Image.open("app/omegakavya.jpeg")
 st.sidebar.image(logo, use_container_width=True)
-st.sidebar.title("📊 Segmentation Dashboard")
+st.sidebar.title("\U0001F4CA Segmentation Dashboard")
 st.sidebar.markdown("Explore data insights for clustered user segments.")
 st.markdown("<style>section[data-testid='stSidebar'] { overflow-y: auto; }</style>", unsafe_allow_html=True)
 
 # ---------- Page Config ----------
-st.set_page_config(page_title="🎯 User Segmentation Dashboard", layout="wide")
+st.set_page_config(page_title="\U0001F3AF User Segmentation Dashboard", layout="wide")
 
 # ---------- Load Data ----------
 @st.cache_data
 def load_data():
     df = pd.read_csv("data/user_profiles_with_segments.csv")
-    df.columns = df.columns.str.strip()  # Clean column names
+    df.columns = df.columns.str.strip()
     return df
 
 df = load_data()
 
 # ---------- Sidebar Filters ----------
-st.sidebar.header("🔍 Filter Options")
+st.sidebar.header("\U0001F50D Filter Options")
 segments = df['Segment_Name'].unique()
 selected_segments = st.sidebar.multiselect("Select Segments", segments, default=list(segments))
-
 filtered_df = df[df['Segment_Name'].isin(selected_segments)]
 
 # ---------- Dashboard Title ----------
-st.title("🎯 User Segmentation Analysis Dashboard")
+st.title("\U0001F3AF User Segmentation Analysis Dashboard")
 
 # ---------- KPI Metrics ----------
-st.markdown("### 📌 Overview Metrics")
+st.markdown("### \U0001F4CC Overview Metrics")
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Users", f"{len(filtered_df)}")
 col2.metric("Avg CTR", f"{filtered_df['Click-Through Rates (CTR)'].mean():.2%}")
 col3.metric("Avg Conversion", f"{filtered_df['Conversion Rates'].mean():.2%}")
 
 # ---------- Segment Distribution ----------
-st.markdown("### 📊 Segment Distribution")
+st.markdown("### \U0001F4CA Segment Distribution")
 segment_counts = filtered_df['Segment_Name'].value_counts()
-st.bar_chart(segment_counts)
+fig1 = px.bar(
+    x=segment_counts.index,
+    y=segment_counts.values,
+    labels={'x': 'Segment', 'y': 'User Count'},
+    title="Segment Distribution",
+    color=segment_counts.index,
+    color_discrete_sequence=px.colors.qualitative.Set2
+)
+st.plotly_chart(fig1, use_container_width=True)
 
 # ---------- Engagement Patterns ----------
-st.markdown("### 🕒 Engagement Patterns")
+st.markdown("### \U0001F552 Engagement Patterns")
 engagement = filtered_df.groupby('Segment_Name')[
     ['Time Spent Online (hrs/weekday)', 'Time Spent Online (hrs/weekend)']
-].mean()
-st.line_chart(engagement)
+].mean().reset_index()
+fig2 = px.line(
+    engagement.melt(id_vars="Segment_Name"),
+    x="Segment_Name",
+    y="value",
+    color="variable",
+    markers=True,
+    labels={"value": "Avg Hours", "Segment_Name": "Segment", "variable": "Day Type"},
+    title="Engagement Patterns"
+)
+st.plotly_chart(fig2, use_container_width=True)
 
 # ---------- CTR & Conversion ----------
-st.markdown("### 📈 CTR & Conversion Rates")
+st.markdown("### \U0001F4C8 CTR & Conversion Rates")
 conversion = filtered_df.groupby('Segment_Name')[
     ['Click-Through Rates (CTR)', 'Conversion Rates']
-].mean()
-st.area_chart(conversion)
+].mean().reset_index()
+fig3 = px.area(
+    conversion.melt(id_vars="Segment_Name"),
+    x="Segment_Name",
+    y="value",
+    color="variable",
+    markers=True,
+    labels={"value": "Rate", "Segment_Name": "Segment", "variable": "Metric"},
+    title="CTR & Conversion Rates"
+)
+st.plotly_chart(fig3, use_container_width=True)
 
 # ---------- Income Distribution ----------
-st.markdown("### 💰 Income Distribution by Segment")
+st.markdown("### \U0001F4B0 Income Distribution by Segment")
 income = pd.crosstab(filtered_df['Segment_Name'], filtered_df['Income Level'])
-st.bar_chart(income)
+income = income.reset_index().melt(id_vars="Segment_Name", var_name="Income Level", value_name="User Count")
+fig4 = px.bar(
+    income,
+    x="Segment_Name",
+    y="User Count",
+    color="Income Level",
+    barmode="group",
+    title="Income Distribution",
+    labels={"Segment_Name": "Segment"}
+)
+st.plotly_chart(fig4, use_container_width=True)
 
 # ---------- Heatmap Comparison (Optional) ----------
-st.markdown("### 🔥 Segment Metric Heatmap")
+st.markdown("### \U0001F525 Segment Metric Heatmap")
 heatmap_data = filtered_df.groupby("Segment_Name")[
     ['Click-Through Rates (CTR)', 'Conversion Rates', 'Time Spent Online (hrs/weekday)', 'Time Spent Online (hrs/weekend)']
 ].mean()
-
-fig, ax = plt.subplots(figsize=(10, 4))
-sns.heatmap(heatmap_data, annot=True, cmap="YlGnBu", fmt=".2f", ax=ax)
-st.pyplot(fig)
+fig5 = px.imshow(
+    heatmap_data,
+    labels=dict(x="Metrics", y="Segment", color="Value"),
+    color_continuous_scale="YlGnBu",
+    title="Segment Metric Heatmap"
+)
+st.plotly_chart(fig5, use_container_width=True)
 
 # ---------- Segment Profiles ----------
-st.markdown("### 📌 Segment Insights & Strategic Recommendations")
+st.markdown("### \U0001F4CC Segment Insights & Strategic Recommendations")
 
 segment_profiles = {
     "Digital Natives": {
@@ -139,19 +177,19 @@ segment_profiles = {
 for seg in selected_segments:
     if seg in segment_profiles:
         prof = segment_profiles[seg]
-        with st.expander(f"📂 {seg} — {prof['Size']} users", expanded=True):
-            st.markdown(f"**👥 Demographics:** {prof['Demographics']}")
-            st.markdown(f"**💵 Income Level:** {prof['Income']}")
+        with st.expander(f"\U0001F4C2 {seg} — {prof['Size']} users", expanded=True):
+            st.markdown(f"**\U0001F465 Demographics:** {prof['Demographics']}")
+            st.markdown(f"**\U0001F4B5 Income Level:** {prof['Income']}")
             st.markdown(f"**⏱️ Online Time:** {prof['Online Weekday']} weekdays, {prof['Online Weekend']} weekends")
-            st.markdown(f"**📊 CTR / Conversion:** {prof['CTR']} / {prof['CR']}")
-            st.markdown(f"**💻 Preferred Device:** {prof['Device']}")
-            st.markdown(f"**🎯 Top Interests:** {prof['Interests']}")
-            st.markdown("**💡 Strategic Actions:**")
+            st.markdown(f"**\U0001F4CA CTR / Conversion:** {prof['CTR']} / {prof['CR']}")
+            st.markdown(f"**\U0001F4BB Preferred Device:** {prof['Device']}")
+            st.markdown(f"**\U0001F3AF Top Interests:** {prof['Interests']}")
+            st.markdown("**\U0001F4A1 Strategic Actions:**")
             for tip in prof['Strategy']:
                 st.markdown(f"- {tip}")
 
 # ---------- Export Button ----------
-st.markdown("### 📥 Export Data")
+st.markdown("### \U0001F4E5 Export Data")
 csv = filtered_df.to_csv(index=False)
 st.download_button(
     label="Download Filtered Data as CSV",
@@ -159,3 +197,22 @@ st.download_button(
     file_name='filtered_user_segments.csv',
     mime='text/csv'
 )
+# ---------- Simulated Footer ----------
+footer = """
+<style>
+    .footer {
+        position: relative;
+        bottom: 0;
+        width: 100%;
+        text-align: center;
+        color: #888;
+        padding: 10px;
+        font-size: 1.0em;
+    }
+</style>
+<div class="footer">
+    Made by <a href="https://github.com/OmegaKavya" target="_blank" style="text-decoration: none; color: #888;">OmegaKavya</a>
+</div>
+"""
+
+st.markdown(footer, unsafe_allow_html=True)
