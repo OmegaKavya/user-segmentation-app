@@ -54,7 +54,7 @@ seg_df = pd.DataFrame({
 })
 fig1 = px.bar(
     seg_df,
-    x="segment",
+    x="Segment",
     y="User Count",
     color="Segment",
     title="Segment Distribution",
