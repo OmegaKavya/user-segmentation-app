@@ -75,7 +75,7 @@ fig2 = px.line(
     color="variable",
     markers=True,
     labels={"value": "Avg Hours", "Segment_Name": "Segment", "variable": "Day Type"},
-    title="Engagement Patterns"
+    title="Engagement Patterns",
     hover_data=["Segment_Name", "variable", "value"]
 )
 st.plotly_chart(fig2, use_container_width=True)
@@ -92,7 +92,7 @@ fig3 = px.area(
     color="variable",
     markers=True,
     labels={"value": "Rate", "Segment_Name": "Segment", "variable": "Metric"},
-    title="CTR & Conversion Rates"
+    title="CTR & Conversion Rates",
     hover_data=["Segment_Name", "variable", "value"]
 )
 st.plotly_chart(fig3, use_container_width=True)
@@ -108,7 +108,7 @@ fig4 = px.bar(
     color="Income Level",
     barmode="group",
     title="Income Distribution",
-    labels={"Segment_Name": "Segment"}
+    labels={"Segment_Name": "Segment"},
     hover_data=["Segment_Name", "Income Level", "User Count"]
 )
 st.plotly_chart(fig4, use_container_width=True)
@@ -122,7 +122,7 @@ fig5 = px.imshow(
     heatmap_data,
     labels=dict(x="Metrics", y="Segment", color="Value"),
     color_continuous_scale="YlGnBu",
-    title="Segment Metric Heatmap"
+    title="Segment Metric Heatmap",
     text_auto=".2f"
 )
 st.plotly_chart(fig5, use_container_width=True)
