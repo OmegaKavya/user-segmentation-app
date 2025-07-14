@@ -169,5 +169,21 @@ with st.expander("📊 Explore All Segment Profiles", expanded=False):
         st.markdown("---")
 
 # Footer
-st.markdown("---")
-st.markdown("© 2025 User Segmentation App · Built with ❤️ using Streamlit")
+footer = """
+<style>
+    .footer {
+        position: relative;
+        bottom: 0;
+        width: 100%;
+        text-align: center;
+        color: #888;
+        padding: 10px;
+        font-size: 1.0em;
+    }
+</style>
+<div class="footer">
+    Made by <a href="https://github.com/OmegaKavya" target="_blank" style="text-decoration: none; color: #888;">OmegaKavya</a>
+</div>
+"""
+
+st.markdown(footer, unsafe_allow_html=True)
