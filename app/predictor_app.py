@@ -7,7 +7,7 @@ from PIL import Image
 
 # Load your logo
 logo = Image.open("app/omegakavya.jpeg")
-st.sidebar.image(logo, use_column_width=True)
+st.sidebar.image(logo, use_container_width=True)
 
 # Load models and encoders
 kmeans = joblib.load("models/kmeans_model.joblib")
