@@ -2,6 +2,13 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from PIL import Image
+
+logo = Image.open("omegakavya.jpeg")
+st.sidebar.image(logo, use_column_width=True)
+st.sidebar.title("📊 Segmentation Dashboard")
+st.sidebar.markdown("Explore data insights for clustered user segments.")
+st.markdown("<style>section[data-testid='stSidebar'] { overflow-y: auto; }</style>", unsafe_allow_html=True)
 
 # ---------- Page Config ----------
 st.set_page_config(page_title="🎯 User Segmentation Dashboard", layout="wide")
@@ -9,7 +16,7 @@ st.set_page_config(page_title="🎯 User Segmentation Dashboard", layout="wide")
 # ---------- Load Data ----------
 @st.cache_data
 def load_data():
-    df = pd.read_csv("../data/user_profiles_with_segments.csv")
+    df = pd.read_csv("data/user_profiles_with_segments.csv")
     df.columns = df.columns.str.strip()  # Clean column names
     return df
 
