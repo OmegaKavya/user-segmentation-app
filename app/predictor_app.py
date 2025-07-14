@@ -3,6 +3,11 @@ import numpy as np
 import joblib
 import pandas as pd
 import json
+from PIL import Image
+
+# Load your logo
+logo = Image.open("omegakavya.jpeg")
+st.sidebar.image(logo, use_column_width=True)
 
 # Load models and encoders
 kmeans = joblib.load("models/kmeans_model.joblib")
