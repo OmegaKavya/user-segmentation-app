@@ -5,11 +5,11 @@ import pandas as pd
 import json
 
 # Load models and encoders
-kmeans = joblib.load("../models/kmeans_model.joblib")
-label_encoders = joblib.load("../models/label_encoders.joblib")
-scaler = joblib.load("../models/scaler.joblib")
-mlb = joblib.load("../models/mlb.joblib")
-feature_order = joblib.load("../models/feature_order.joblib")
+kmeans = joblib.load("models/kmeans_model.joblib")
+label_encoders = joblib.load("models/label_encoders.joblib")
+scaler = joblib.load("models/scaler.joblib")
+mlb = joblib.load("models/mlb.joblib")
+feature_order = joblib.load("models/feature_order.joblib")
 
 # Segment labels and descriptions
 segment_names = {
