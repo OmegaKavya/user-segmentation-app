@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from PIL import Image
 
-logo = Image.open("omegakavya.jpeg")
-st.sidebar.image(logo, use_column_width=True)
+logo = Image.open("app/omegakavya.jpeg")
+st.sidebar.image(logo, use_container_width=True)
 st.sidebar.title("📊 Segmentation Dashboard")
 st.sidebar.markdown("Explore data insights for clustered user segments.")
 st.markdown("<style>section[data-testid='stSidebar'] { overflow-y: auto; }</style>", unsafe_allow_html=True)
