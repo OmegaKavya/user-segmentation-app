@@ -30,6 +30,13 @@ filtered_df = df[df['Segment_Name'].isin(selected_segments)]
 
 # ---------- Dashboard Title ----------
 st.title("\U0001F3AF User Segmentation Analysis Dashboard")
+# ---------- Introductory Description ----------
+st.markdown("""
+<div style='font-size:16px; line-height:1.6;'>
+Welcome to the <b>User Segmentation Dashboard</b> — an interactive platform to explore behavioral and demographic patterns of users across distinct segments.<br><br>
+Use the filters in the sidebar to dive deeper into CTR trends, income groups, engagement patterns, and actionable strategies tailored to each cluster.
+</div>
+""", unsafe_allow_html=True)
 
 # ---------- KPI Metrics ----------
 st.markdown("### \U0001F4CC Overview Metrics")
