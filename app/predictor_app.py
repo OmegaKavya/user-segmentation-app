@@ -6,7 +6,7 @@ import json
 from PIL import Image
 
 # Load your logo
-logo = Image.open("omegakavya.jpeg")
+logo = Image.open("app/omegakavya.jpeg")
 st.sidebar.image(logo, use_column_width=True)
 
 # Load models and encoders
