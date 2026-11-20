@@ -1,0 +1,25 @@
+.chart { margin: 1.4rem 0 0; }
+
+.chart figcaption {
+  font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 0.7rem;
+}
+
+.chart svg { width: 100%; height: auto; display: block; }
+
+.grid { stroke: var(--rule-soft); stroke-width: 1; }
+.tick { fill: var(--text-muted); font-family: var(--mono); font-size: 11px; }
+.axis-label { fill: var(--text-muted); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+.band { fill: var(--no); opacity: 0.16; }
+.line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.dot { fill: var(--accent-bright); stroke: var(--bg); stroke-width: 2; transition: r 140ms var(--ease); }
+
+.chart-key { display: flex; gap: 1.3rem; margin-top: 0.7rem; font-size: 0.76rem; color: var(--text-muted); }
+.chart-key span { display: flex; align-items: center; gap: 0.4rem; }
+.swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.line-swatch { background: var(--accent); }
+.band-swatch { background: var(--no); opacity: 0.45; height: 10px; }
+
+.chart-readout { margin: 0.8rem 0 0; font-size: 0.82rem; color: var(--text-muted); min-height: 2.6em; }
+.chart-readout b { color: var(--text); }

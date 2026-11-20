@@ -1,24 +1,9 @@
-# Python
 __pycache__/
-*.pyc
-*.pyo
-
-# Jupyter Notebooks checkpoints
-.ipynb_checkpoints/
-
-# VS Code
-.vscode/
-
-# macOS
+*.py[cod]
+.venv/
+venv/
 .DS_Store
 
-# Models (optional, if you host them elsewhere)
-# models/
-
-# Data (optional)
-# data/
-
-# Streamlit cache
-.streamlit/
-
-.devcontainer/
+# Frontend build output and dependencies
+/web/node_modules/
+/web/dist/

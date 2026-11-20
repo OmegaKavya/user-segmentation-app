@@ -1,0 +1,115 @@
+/* A lab notebook rather than a marketing dashboard: the subject is whether a
+   measurement holds up, so the page is quiet and the only saturated colour is
+   the verdict itself.
+
+   Green, red and blue were checked rather than chosen. Adjacent pairs clear
+   dE 16.0 at worst under deuteranopia, protanopia and tritanopia in both
+   themes, and each clears 3.8:1 against its own ground. The verdict never
+   relies on colour alone: it is always written out. */
+:root {
+  --bg: #0e1420;
+  --panel-top: rgba(28, 37, 54, 0.55);
+  --panel-bottom: rgba(14, 20, 32, 0.66);
+
+  --accent: #5b8def;
+  --accent-bright: #8cb0ff;
+  --accent-deep: #35589c;
+
+  --yes: #3fb37f;
+  --no: #e2626b;
+
+  --text: #e9ecf2;
+  --text-2: #abb3c2;
+  --text-3: #76809180;
+  --text-muted: #768091;
+  --rule: rgba(91, 141, 239, 0.24);
+  --rule-soft: rgba(91, 141, 239, 0.1);
+
+  --display: "Newsreader", Georgia, serif;
+  --sans: "Inter", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --radius: 10px;
+  --grain: 0.3; --grain-blend: overlay; --wash: 1;
+  --input-bg: rgba(0, 0, 0, 0.18);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f3ef;
+    --panel-top: rgba(255, 255, 255, 0.74);
+    --panel-bottom: rgba(244, 243, 239, 0.8);
+    --accent: #3763c4; --accent-bright: #4f7ee0; --accent-deep: #27478f;
+    --yes: #1e8b5f; --no: #c33f4b;
+    --text: #141821; --text-2: #474e5c; --text-muted: #727a88;
+    --rule: rgba(55, 99, 196, 0.26); --rule-soft: rgba(55, 99, 196, 0.11);
+    --shadow: 0 16px 40px rgba(20, 24, 33, 0.09);
+    --grain: 0.18; --grain-blend: multiply; --wash: 0.45;
+    --input-bg: rgba(255, 255, 255, 0.72);
+  }
+}
+
+:root[data-theme="light"] {
+  --bg: #f4f3ef;
+  --panel-top: rgba(255, 255, 255, 0.74); --panel-bottom: rgba(244, 243, 239, 0.8);
+  --accent: #3763c4; --accent-bright: #4f7ee0; --accent-deep: #27478f;
+  --yes: #1e8b5f; --no: #c33f4b;
+  --text: #141821; --text-2: #474e5c; --text-muted: #727a88;
+  --rule: rgba(55, 99, 196, 0.26); --rule-soft: rgba(55, 99, 196, 0.11);
+  --shadow: 0 16px 40px rgba(20, 24, 33, 0.09);
+  --grain: 0.18; --grain-blend: multiply; --wash: 0.45;
+  --input-bg: rgba(255, 255, 255, 0.72);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
+
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before, body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+body::before {
+  opacity: var(--wash);
+  background:
+    radial-gradient(66% 46% at 12% 0%, rgba(91, 141, 239, 0.18), transparent 62%),
+    radial-gradient(56% 42% at 90% 8%, rgba(63, 179, 127, 0.1), transparent 60%);
+}
+
+body::after {
+  opacity: var(--grain); mix-blend-mode: var(--grain-blend);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+
+h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.14; margin: 0; }
+a { color: var(--accent); }
+
+.shell { position: relative; z-index: 1; width: min(1080px, 100% - 2rem); margin: 0 auto; }
+
+.panel {
+  background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+  border: 1px solid var(--rule); border-radius: var(--radius); padding: 1.5rem;
+  backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: transform 350ms var(--ease), border-color 350ms var(--ease);
+}
+
+.panel:hover { transform: translateY(-2px); border-color: rgba(91, 141, 239, 0.4); }
+.panel h2 { font-size: 1.3rem; margin-bottom: 0.3rem; }
+.panel .note { color: var(--text-muted); font-size: 0.85rem; margin: 0 0 1.1rem; }
+
+.eyebrow { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); }
+.rule { height: 1px; border: 0; background: linear-gradient(90deg, transparent, var(--rule), transparent); margin: 0; }
+
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity 600ms var(--ease), transform 600ms var(--ease); }
+.reveal.shown { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  .reveal { opacity: 1; transform: none; }
+}

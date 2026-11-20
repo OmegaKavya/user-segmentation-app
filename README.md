@@ -1,78 +1,91 @@
-# 📊 AI-Powered User Segmentation Dashboard – By OmegaKavya
+# Are These Clusters Real?
 
-An interactive, responsive, and data-driven dashboard built using **Streamlit** and **Plotly**, enabling stakeholders to explore behavioral and demographic patterns of users segmented through unsupervised ML clustering.
+**[Live](https://are-these-clusters-real.web.app)** · a cluster validity test
+that runs in the browser.
 
-[![Streamlit App](https://img.shields.io/badge/Live%20Demo-Streamlit-brightgreen)](https://user-segmentation.streamlit.app/)
-[![Made with Streamlit](https://img.shields.io/badge/Made%20with-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
+This began as a user segmentation dashboard. It clustered a thousand
+ad-audience profiles into four groups, named them Power Users, Premium
+Engagers, Digital Natives and Casual Browsers, and reported on their
+behaviour. The groups do not exist.
 
----
+## What was wrong
 
-## 🚀 Features
+**The names were assigned by cluster index.** k-means numbers its clusters
+arbitrarily, so `0: "Digital Natives"` attached a behavioural claim to
+whichever cluster happened to come out first. Nothing checked the names
+against what the clusters did.
 
-✅ **Responsive UI** – Mobile & desktop optimized  
-✅ **Interactive Filtering** – Multi-select segment filter  
-✅ **Visual Insights** – 5+ interactive Plotly charts  
-✅ **Segment Profiles** – Demographics, devices, CTR/CR, strategies  
-✅ **Download CSV** – Export filtered segment data  
-✅ **Custom Branding** – Logo, intro, and footer  
-✅ **Optimized Performance** – Caching with `@st.cache_data`
+**Checked, the four segments are indistinguishable:**
 
----
+| Segment | hrs/day | CTR | conversion | likes |
+| --- | ---: | ---: | ---: | ---: |
+| Power Users | 2.81 | 0.129 | 0.048 | 4,949 |
+| Premium Engagers | 2.73 | 0.131 | 0.053 | 4,829 |
+| Digital Natives | 2.75 | 0.126 | 0.050 | 4,986 |
+| Casual Browsers | 2.75 | 0.122 | 0.049 | 5,071 |
 
-## 🧠 About the Project
+The Power Users spend three minutes a day longer online than the Casual
+Browsers. The Premium Engagers have the fewest likes.
 
-This dashboard was designed to help marketers, analysts, and PMs explore user clusters generated via ML techniques. By visualizing key attributes like income, CTR, conversion, and engagement hours, decision-makers can craft targeted strategies for each unique segment.
+**The elbow curve was computed and ignored.** The training script evaluates
+inertia for k from 1 to 10 and then sets `optimal_k = 4` without consulting
+it. Inertia falls smoothly the whole way; there is no elbow.
 
----
+**The data cannot support segments.** Every categorical field is close to
+uniform, the largest correlation between any two behavioural columns is 0.08,
+and click-through rate does not differ by age, gender, income or education
+(all p > 0.38). The columns were generated independently, so there is no joint
+structure to find.
 
-## 🧩 Tech Stack
+## The test
 
-| Layer         | Tech                 |
-|---------------|----------------------|
-| Frontend/UI   | Streamlit            |
-| Charts        | Plotly Express       |
-| Data Wrangling| Pandas               |
-| Caching       | `@st.cache_data`     |
-| Assets        | PIL                  |
-| Data Format   | CSV (Clustered Data) |
+k-means always returns clusters. Given uniform noise it returns tidy ones.
+The question is whether they are more than a partition of a featureless cloud,
+and the way to answer it is to compare against a null that has no structure by
+construction.
 
----
+Each column is shuffled independently. Every column keeps its own
+distribution exactly; only the relationships between columns are destroyed,
+which is precisely what clustering claims to find. If the real data scores no
+better than that, there is nothing there.
 
-## 📊 Sample Segments
+Searching over seven values of k is seven chances to clear a threshold, so the
+comparison uses a **max-statistic permutation test**: each shuffled copy is
+scored at every k and only its best is kept, building the null distribution of
+"the best silhouette obtainable by searching over k". No correction is needed
+afterwards, and none would be possible, since with R shuffles the smallest
+attainable p is 1/(R+1).
 
-| Segment           | Key Traits                                      |
-|-------------------|-------------------------------------------------|
-| **Digital Natives** | High CTR, Female 35–44, Travel/Gardening |
-| **Casual Browsers** | Fitness, UI simplicity, Email friendly    |
-| **Power Users**     | Mobile-first, Finance focused              |
-| **Premium Engagers**| Loyalty perks, Pet care + Data Science     |
+| | best k | silhouette | best null | p |
+| --- | ---: | ---: | ---: | ---: |
+| Ad audience, 1000 users | 5 | 0.058 | 0.051 | **0.19** |
+| Customer tiers, 900 records (control) | 3 | 0.446 | 0.108 | **0.032** |
 
----
+The control exists because a test that only ever says "no" is
+indistinguishable from a broken test. Both run in the page, on the same code.
 
-## 💡 Use Cases
+## No server
 
-- 📈 **Marketing Teams** – Segment-based personalization  
-- 🧪 **Product Managers** – Understand user behavior by type  
-- 📊 **Analysts** – Drill down into user engagement metrics
+The whole assessment is arithmetic, so it runs client side in a Web Worker:
+30 shuffles at each of 7 values of k, around 6 seconds, with nothing leaving
+the browser. You can upload your own CSV and it is never transmitted anywhere.
 
----
+`analysis/validity.py` is the reference implementation and `web/src/cluster.js`
+is the port. They share one small deterministic generator, so they draw the
+same random numbers and agree exactly rather than approximately:
+`scripts/verify_cluster.mjs` compares 38 numbers and the worst relative
+difference is 5e-16.
 
-## 📦 Installation
+## Running it
 
 ```bash
-git clone https://github.com/OmegaKavya/user-segmentation-app.git
-cd user-segmentation-app
 pip install -r requirements.txt
-streamlit run app/1_Home.py
+
+python scripts/bake_datasets.py      # prepare the bundled datasets
+node scripts/verify_cluster.mjs      # JS against the Python reference
+
+cd web && npm install && npm run dev
 ```
 
-## 🌐 Live Demo
-
-**👉 Try it Live:**  
-🔗 [https://user-segmentation.streamlit.app](https://user-segmentation.streamlit.app)
-
-
-## 🙋‍♀️ Author
-
-Made with ❤️ by **OmegaKavya**  
-Connect on [LinkedIn](https://www.linkedin.com/in/aggarwalkavya)
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the method and the decisions behind
+it.

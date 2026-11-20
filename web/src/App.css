@@ -1,0 +1,11 @@
+main.shell { display: grid; gap: 1.3rem; }
+
+.footer {
+  position: relative; z-index: 1; width: min(1080px, 100% - 2rem);
+  margin: 4rem auto 3rem; padding-top: 1.75rem; text-align: center;
+  color: var(--text-muted); font-size: 0.86rem;
+}
+
+.footer p { margin: 1.1rem 0 0; }
+.footer a { text-decoration: none; border-bottom: 1px solid var(--rule); }
+.footer a:hover { border-bottom-color: var(--accent); }
