@@ -61,16 +61,50 @@ different units, and k-means is a distance method.
 **A worker.** 30 shuffles at 7 values of k is 217 clusterings and 217
 silhouettes. On the main thread the page would freeze.
 
+## The other three tests
+
+**Gap statistic** (Tibshirani, Walther and Hastie, 2001) compares log
+within-cluster dispersion against the same quantity on data drawn uniformly
+from the bounding box. The reference has no clusters by construction but keeps
+the data's extent, so this asks whether the clusters are tighter than spread
+alone would give. The selection rule takes the smallest k whose gap is within
+one standard error of the next k's, rather than the maximum, which
+over-selects.
+
+**Bootstrap stability** resamples with replacement, clusters the resample, and
+measures agreement with the original labelling on shared points via the
+adjusted Rand index. Real groups survive having members removed and
+duplicated; a partition of noise is redrawn somewhere else each time. It
+assumes nothing about a null distribution, which is what makes it independent
+evidence rather than a second permutation test.
+
+**Three algorithms** because k-means assumes round, equal-sized groups. A
+Gaussian mixture with diagonal covariances allows different widths per axis, so
+it can hold elongated groups that k-means splits. Ward linkage builds groups by
+merging rather than by distance to a centre, so it can find structure k-means
+cannot. If only one of them finds something, that something is probably its
+assumption, and the page says so.
+
+The Gaussian mixture uses diagonal rather than full covariances. A full
+covariance needs a matrix inverse per component per iteration, which is a lot
+of linear algebra to reimplement identically in two languages for a question
+that does not turn on it. The assumption is stated rather than hidden.
+
 ## What this does not do
 
 It does not say which clustering algorithm to use, and it does not rescue a
 dataset that has no structure. It answers one question: whether the groups a
 clustering returned are more than a partition of noise.
 
-It also inherits k-means' assumptions. A dataset with genuine but non-convex
-structure, where k-means does badly, could fail this test while still
-containing groups. The honest statement is "k-means found nothing beyond
-chance here", not "this data has no structure".
+Running three algorithms addresses, but does not eliminate, the dependence on
+any one of their assumptions. All three are still centroid or variance based,
+so a dataset with genuinely non-convex structure, rings or spirals, could fail
+every test here and still contain groups. The honest statement remains "these
+methods found nothing beyond chance", not "this data has no structure".
+
+The heavy tests run on a 500 point subsample when the data is larger, since
+silhouette and Ward linkage are both quadratic. That is ample for a yes or no
+and keeps the whole run under ten seconds.
 
 ## Verification
 

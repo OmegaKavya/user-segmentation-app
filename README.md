@@ -37,7 +37,29 @@ and click-through rate does not differ by age, gender, income or education
 (all p > 0.38). The columns were generated independently, so there is no joint
 structure to find.
 
-## The test
+## Four tests, not one
+
+Any single validity measure rests on an assumption. These four rest on
+different ones, so agreement between them means considerably more than any of
+them alone, and disagreement says which assumption is carrying the result.
+
+| Test | What it asks | Ad audience | Control |
+| --- | --- | --- | --- |
+| Permutation | Does it beat data with the relationships shuffled out? | p = 0.19 | **p = 0.032** |
+| Gap statistic | Are the clusters tighter than uniform spread gives? | selects k = 2, the degenerate minimum | **selects k = 3** |
+| Bootstrap stability | Does the same partition come back after resampling? | ARI 0.19, not reproducible | **ARI 1.00 at k = 3** |
+| Three algorithms | Do k-means, a Gaussian mixture and Ward linkage agree? | peak at k = 6, 2 and 7 | **all peak at k = 3** |
+
+All four agree in both directions. For the ad audience they agree there is
+nothing; for the control, constructed to contain three groups, they agree on
+three.
+
+The algorithms disagreeing with each other is itself evidence: k-means assumes
+round equal-sized groups, a Gaussian mixture allows different widths per axis,
+and Ward builds by merging. When only one of them finds something, that
+something is usually its assumption.
+
+## The permutation test
 
 k-means always returns clusters. Given uniform noise it returns tidy ones.
 The question is whether they are more than a partition of a featureless cloud,
@@ -56,11 +78,6 @@ scored at every k and only its best is kept, building the null distribution of
 afterwards, and none would be possible, since with R shuffles the smallest
 attainable p is 1/(R+1).
 
-| | best k | silhouette | best null | p |
-| --- | ---: | ---: | ---: | ---: |
-| Ad audience, 1000 users | 5 | 0.058 | 0.051 | **0.19** |
-| Customer tiers, 900 records (control) | 3 | 0.446 | 0.108 | **0.032** |
-
 The control exists because a test that only ever says "no" is
 indistinguishable from a broken test. Both run in the page, on the same code.
 
@@ -70,11 +87,17 @@ The whole assessment is arithmetic, so it runs client side in a Web Worker:
 30 shuffles at each of 7 values of k, around 6 seconds, with nothing leaving
 the browser. You can upload your own CSV and it is never transmitted anywhere.
 
-`analysis/validity.py` is the reference implementation and `web/src/cluster.js`
-is the port. They share one small deterministic generator, so they draw the
-same random numbers and agree exactly rather than approximately:
-`scripts/verify_cluster.mjs` compares 38 numbers and the worst relative
-difference is 5e-16.
+`analysis/validity.py` and `analysis/methods.py` are the reference
+implementations; `web/src/cluster.js` and `web/src/methods.js` are the ports.
+They share one small deterministic generator, so they draw the same random
+numbers and agree exactly rather than approximately. `scripts/verify_cluster.mjs`
+and `scripts/verify_methods.mjs` compare 104 numbers between them; the worst
+relative difference is 2e-14.
+
+That discipline caught a real difference: the Python gap statistic filled its
+uniform reference column by column and the JavaScript filled it row by row,
+consuming the same random stream in different orders. Statistically both were
+fine and the two would have disagreed forever.
 
 ## Running it
 
@@ -83,6 +106,7 @@ pip install -r requirements.txt
 
 python scripts/bake_datasets.py      # prepare the bundled datasets
 node scripts/verify_cluster.mjs      # JS against the Python reference
+node scripts/verify_methods.mjs      # gap, stability and the three algorithms
 
 cd web && npm install && npm run dev
 ```

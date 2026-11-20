@@ -2,10 +2,18 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Panel from "./Panel.jsx";
 import Chart from "./Chart.jsx";
 import Verdict from "./Verdict.jsx";
+import { Gap, Stability, Algorithms, Synthesis } from "./Evidence.jsx";
 import "./Lab.css";
 
 const KS = [2, 3, 4, 5, 6, 7, 8];
 const REPEATS = 30;
+
+const STAGE_LABEL = {
+  permutation: "the permutation test",
+  gap: "the gap statistic",
+  algorithms: "three clustering algorithms",
+  stability: "bootstrap stability",
+};
 
 export default function Lab({ datasets }) {
   const [key, setKey] = useState("ads");
@@ -20,12 +28,23 @@ export default function Lab({ datasets }) {
     workerRef.current?.terminate();
     const worker = new Worker(new URL("../worker.js", import.meta.url), { type: "module" });
     workerRef.current = worker;
-    setState({ status: "running", progress: 0 });
+    setState({ status: "running", stage: "permutation" });
+    // Each test reports as it finishes, so the page fills in rather than
+    // waiting on the slowest one.
     worker.onmessage = (event) => {
       const m = event.data;
-      if (m.type === "progress") setState((s) => ({ ...s, progress: m.fraction }));
-      else if (m.type === "done") setState({ status: "done", results: m.results });
-      else setState({ status: "failed", message: m.message });
+      setState((s) => {
+        switch (m.type) {
+          case "stage": return { ...s, status: "running", stage: m.stage, sampled: m.sampled ?? s.sampled };
+          case "permutation": return { ...s, status: "running", permutation: m.result };
+          case "gap": return { ...s, gap: m.result };
+          case "algorithms": return { ...s, algorithms: m.result };
+          case "stability": return { ...s, stability: m.result };
+          case "done": return { ...s, status: "done" };
+          case "error": return { status: "failed", message: m.message };
+          default: return s;
+        }
+      });
     };
     worker.postMessage({ X: data.X, ks: KS, repeats: REPEATS });
   }, []);
@@ -92,18 +111,36 @@ export default function Lab({ datasets }) {
       {active && <p className="lab-about">{active.note}</p>}
 
       {state.status === "running" && (
-        <div className="lab-progress" role="status">
-          <div className="bar"><span style={{ width: `${Math.round(100 * (state.progress || 0))}%` }} /></div>
-          <p>Clustering {KS.length} values of k, plus {KS.length * REPEATS} shuffled nulls…</p>
-        </div>
+        <p className="lab-running" role="status">
+          Running {STAGE_LABEL[state.stage] || "the tests"}…
+        </p>
       )}
 
       {state.status === "failed" && <p className="lab-error" role="alert">{state.message}</p>}
 
-      {state.status === "done" && (
+      {state.permutation && (
         <>
-          <Verdict result={state.results} />
-          <Chart results={state.results.perK} />
+          <Verdict result={state.permutation} />
+          <Chart results={state.permutation.perK} />
+
+          <h3 className="lab-sub">Two more lines of evidence</h3>
+          <p className="lab-sub-note">
+            The test above compares against a null with no structure. These ask
+            different questions, so agreement between them means more than any
+            one of them alone.
+            {state.sampled && ` Computed on a ${state.sampled} point sample, which is ample for the answer and keeps the run to seconds.`}
+          </p>
+          <div className="evidence-grid">
+            <Gap gap={state.gap} />
+            <Stability stability={state.stability} />
+            <Algorithms algorithms={state.algorithms} />
+          </div>
+          <Synthesis
+            permutation={state.permutation}
+            gap={state.gap}
+            stability={state.stability}
+            algorithms={state.algorithms}
+          />
         </>
       )}
     </Panel>
