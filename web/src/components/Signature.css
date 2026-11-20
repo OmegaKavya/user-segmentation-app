@@ -10,7 +10,7 @@
      nothing is drawn, then runs to zero, which reads as a pen stroke. */
   stroke-dasharray: 360;
   stroke-dashoffset: 360;
-  filter: drop-shadow(0 0 7px rgba(91, 141, 239, 0.4));
+  filter: drop-shadow(0 0 7px rgba(22, 163, 126, 0.4));
 }
 
 .sig.shown .sig-path {

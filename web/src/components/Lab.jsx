@@ -67,8 +67,8 @@ export default function Lab({ datasets }) {
     <Panel className="lab" aria-labelledby="lab-heading">
       <h2 id="lab-heading">Test a dataset</h2>
       <p className="note">
-        k-means is run for every k from 2 to 8, then again on twenty copies of
-        the data with each column shuffled independently. The shuffle keeps
+        k-means is run for every k from {KS[0]} to {KS[KS.length - 1]}, then again
+        on {REPEATS} copies of the data with each column shuffled independently. The shuffle keeps
         every column's own distribution and destroys only the relationships
         between them, which is exactly the thing clustering claims to find.
       </p>
