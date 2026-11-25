@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { parseCsv, numericColumns, matrix } from "../csv.js";
 import Panel from "./Panel.jsx";
 import Chart from "./Chart.jsx";
 import Verdict from "./Verdict.jsx";
@@ -17,11 +18,29 @@ const STAGE_LABEL = {
 
 export default function Lab({ datasets }) {
   const [key, setKey] = useState("ads");
-  const [custom, setCustom] = useState(null);
+  // The parsed upload and which of its numeric columns are in play. The
+  // dataset actually tested is derived from these, so ticking a column
+  // re-runs the tests on the new selection.
+  const [upload, setUpload] = useState(null);
   const [state, setState] = useState({ status: "idle" });
   const workerRef = useRef(null);
 
-  const active = custom && key === "custom" ? custom : datasets?.[key];
+  const custom = useMemo(() => {
+    if (!upload) return null;
+    const chosen = upload.columns.filter((c) => c.include);
+    if (chosen.length < 2) return { error: "Choose at least two columns." };
+    const rows = matrix(upload.rows, chosen);
+    if (rows.length < 30) return { error: "Needs at least 30 rows complete in the chosen columns." };
+    return {
+      title: upload.name,
+      note: `${rows.length} rows, ${chosen.length} numeric columns, standardised.`,
+      columns: chosen.map((c) => c.name),
+      X: standardise(rows),
+    };
+  }, [upload]);
+
+  const usable = custom && !custom.error ? custom : null;
+  const active = key === "custom" ? usable : datasets?.[key];
 
   const run = useCallback((data) => {
     if (!data) return;
@@ -55,32 +74,23 @@ export default function Lab({ datasets }) {
   const onFile = async (file) => {
     if (!file) return;
     try {
-      const text = await file.text();
-      const rows = text.trim().split(/\r?\n/).map((r) => r.split(","));
-      const header = rows[0].map((h) => h.trim());
+      const rows = parseCsv(await file.text());
+      if (rows.length < 2) throw new Error("That file has no data rows.");
       // Numeric columns only. Anything else would need an encoding decision,
       // and guessing one silently is how this project went wrong the first time.
-      // Numeric columns are taken by index, so a column whose name repeats
-      // cannot be picked twice or missed.
-      const numeric = header
-        .map((_, c) => c)
-        .filter((c) => rows.slice(1, 40).every((r) => {
-          const cell = r[c];
-          return cell !== undefined && cell.trim() !== "" && !Number.isNaN(Number(cell));
-        }));
-      if (numeric.length < 2) throw new Error("Needs at least two numeric columns.");
-
-      const body = rows.slice(1).filter((r) => numeric.every((c) => r[c] !== undefined && r[c].trim() !== ""));
-      if (body.length < 30) throw new Error("Needs at least 30 complete rows.");
-
-      const columns = numeric.map((c) => header[c]);
-      const X = standardise(body.map((r) => numeric.map((c) => Number(r[c]))));
-      setCustom({ title: file.name, note: `${X.length} rows, ${columns.length} numeric columns, standardised.`, columns, X });
+      const columns = numericColumns(rows);
+      if (columns.length < 2) throw new Error("Needs at least two numeric columns.");
+      setUpload({ name: file.name, rows, columns });
       setKey("custom");
     } catch (error) {
       setState({ status: "failed", message: error.message });
     }
   };
+
+  const toggleColumn = (index) => setUpload((u) => ({
+    ...u,
+    columns: u.columns.map((c) => (c.index === index ? { ...c, include: !c.include } : c)),
+  }));
 
   return (
     <Panel className="lab" aria-labelledby="lab-heading">
@@ -97,9 +107,9 @@ export default function Lab({ datasets }) {
           <button key={id} type="button" className={`pick${key === id ? " on" : ""}`}
             onClick={() => setKey(id)}>{d.title}</button>
         ))}
-        {custom && (
+        {upload && (
           <button type="button" className={`pick${key === "custom" ? " on" : ""}`}
-            onClick={() => setKey("custom")}>{custom.title}</button>
+            onClick={() => setKey("custom")}>{upload.name}</button>
         )}
         <label className="pick upload">
           Upload a CSV
@@ -107,6 +117,23 @@ export default function Lab({ datasets }) {
             onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
         </label>
       </div>
+
+      {key === "custom" && upload && (
+        <fieldset className="lab-columns">
+          <legend>Columns to cluster on</legend>
+          {upload.columns.map((c) => (
+            <label key={c.index} className="lab-column">
+              <input type="checkbox" checked={c.include} onChange={() => toggleColumn(c.index)} />
+              {c.name}
+            </label>
+          ))}
+          <p className="lab-columns-note">
+            Columns named like ids, postcodes or phone numbers start unticked:
+            they are labels, and clustering on them finds how the file was numbered.
+          </p>
+        </fieldset>
+      )}
+      {key === "custom" && custom?.error && <p className="lab-error" role="alert">{custom.error}</p>}
 
       {active && <p className="lab-about">{active.note}</p>}
 

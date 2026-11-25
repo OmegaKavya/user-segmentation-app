@@ -32,3 +32,8 @@
 
 .lab-sub { font-size: 1.08rem; margin: 2rem 0 0.3rem; }
 .lab-sub-note { margin: 0; font-size: 0.84rem; color: var(--text-muted); max-width: 76ch; }
+
+.lab-columns { border: 1px solid var(--border, rgba(127,127,127,0.3)); border-radius: 10px; padding: 0.6rem 0.9rem 0.4rem; margin: 0 0 1rem; display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; }
+.lab-columns legend { font-size: 0.8rem; color: var(--text-muted); padding: 0 0.3rem; }
+.lab-column { font-size: 0.84rem; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+.lab-columns-note { flex-basis: 100%; margin: 0.3rem 0 0; font-size: 0.76rem; color: var(--text-muted); }

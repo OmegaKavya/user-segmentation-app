@@ -52,7 +52,7 @@ def main():
          "The dataset this project was built on. Demographics, interests and "
          "engagement, encoded exactly as the original pipeline encoded them.",
          ad_audience),
-        ("tiers", "Customer tiers, 900 records",
+        ("tiers", "Known clusters (control), 900 records",
          "Constructed to contain three groups, as a control. The same "
          "procedure has to find them, or it is not measuring anything.",
          customer_tiers),
