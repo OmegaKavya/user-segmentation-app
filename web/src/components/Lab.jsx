@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { parseCsv, numericColumns, matrix } from "../csv.js";
+import { parseCsv, numericColumns, matrix, uploadSizeError } from "../csv.js";
 import Panel from "./Panel.jsx";
 import Chart from "./Chart.jsx";
 import Verdict from "./Verdict.jsx";
@@ -23,6 +23,9 @@ export default function Lab({ datasets }) {
   // re-runs the tests on the new selection.
   const [upload, setUpload] = useState(null);
   const [state, setState] = useState({ status: "idle" });
+  // Kept apart from the run's state: a run still in progress would otherwise
+  // overwrite a rejected upload's message with its next progress report.
+  const [uploadError, setUploadError] = useState(null);
   const workerRef = useRef(null);
 
   const custom = useMemo(() => {
@@ -31,9 +34,11 @@ export default function Lab({ datasets }) {
     if (chosen.length < 2) return { error: "Choose at least two columns." };
     const rows = matrix(upload.rows, chosen);
     if (rows.length < 30) return { error: "Needs at least 30 rows complete in the chosen columns." };
+    const skipped = upload.rows.length - 1 - rows.length;
     return {
       title: upload.name,
-      note: `${rows.length} rows, ${chosen.length} numeric columns, standardised.`,
+      note: `${rows.length} rows, ${chosen.length} numeric columns, standardised.`
+        + (skipped ? ` Rows left out for a blank or non-numeric cell in a chosen column: ${skipped}.` : ""),
       columns: chosen.map((c) => c.name),
       X: standardise(rows),
     };
@@ -42,15 +47,22 @@ export default function Lab({ datasets }) {
   const usable = custom && !custom.error ? custom : null;
   const active = key === "custom" ? usable : datasets?.[key];
 
-  const run = useCallback((data) => {
-    if (!data) return;
+  const stop = useCallback(() => {
     workerRef.current?.terminate();
+    workerRef.current = null;
+  }, []);
+
+  const run = useCallback((data) => {
+    stop();
     const worker = new Worker(new URL("../worker.js", import.meta.url), { type: "module" });
     workerRef.current = worker;
     setState({ status: "running", stage: "permutation" });
     // Each test reports as it finishes, so the page fills in rather than
     // waiting on the slowest one.
     worker.onmessage = (event) => {
+      // A message already queued when this worker was replaced or stopped
+      // belongs to a selection that is no longer on screen.
+      if (workerRef.current !== worker) return;
       const m = event.data;
       setState((s) => {
         switch (m.type) {
@@ -66,14 +78,23 @@ export default function Lab({ datasets }) {
       });
     };
     worker.postMessage({ X: data.X, ks: KS, repeats: REPEATS });
-  }, []);
+  }, [stop]);
 
-  useEffect(() => { if (active) run(active); }, [active, run]);
-  useEffect(() => () => workerRef.current?.terminate(), []);
+  useEffect(() => {
+    if (active) { run(active); return; }
+    // With no valid selection, a verdict still on screen or still arriving
+    // would describe columns the user has just changed.
+    stop();
+    setState({ status: "idle" });
+  }, [active, run, stop]);
+  useEffect(() => stop, [stop]);
 
   const onFile = async (file) => {
     if (!file) return;
+    setUploadError(null);
     try {
+      const tooBig = uploadSizeError(file.size);
+      if (tooBig) throw new Error(tooBig);
       const rows = parseCsv(await file.text());
       if (rows.length < 2) throw new Error("That file has no data rows.");
       // Numeric columns only. Anything else would need an encoding decision,
@@ -83,7 +104,7 @@ export default function Lab({ datasets }) {
       setUpload({ name: file.name, rows, columns });
       setKey("custom");
     } catch (error) {
-      setState({ status: "failed", message: error.message });
+      setUploadError(error.message);
     }
   };
 
@@ -105,7 +126,7 @@ export default function Lab({ datasets }) {
       <div className="lab-picks">
         {datasets && Object.entries(datasets).map(([id, d]) => (
           <button key={id} type="button" className={`pick${key === id ? " on" : ""}`}
-            onClick={() => setKey(id)}>{d.title}</button>
+            onClick={() => { setKey(id); setUploadError(null); }}>{d.title}</button>
         ))}
         {upload && (
           <button type="button" className={`pick${key === "custom" ? " on" : ""}`}
@@ -117,6 +138,7 @@ export default function Lab({ datasets }) {
             onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
         </label>
       </div>
+      {uploadError && <p className="lab-error" role="alert">{uploadError}</p>}
 
       {key === "custom" && upload && (
         <fieldset className="lab-columns">
@@ -128,7 +150,7 @@ export default function Lab({ datasets }) {
             </label>
           ))}
           <p className="lab-columns-note">
-            Columns named like ids, postcodes or phone numbers start unticked:
+            Columns that look like row numbers, ids, postcodes or phone numbers start unticked:
             they are labels, and clustering on them finds how the file was numbered.
           </p>
         </fieldset>
