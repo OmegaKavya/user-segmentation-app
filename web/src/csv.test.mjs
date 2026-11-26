@@ -67,8 +67,59 @@ test("row numbers written by spreadsheets and pandas start unticked", () => {
   ]);
 });
 
+const ticks = (header) => numericColumns(table(header, (i) => String(i)))
+  .map((c) => [c.name, c.include]);
+
+test("row numbers, account numbers and contact columns start unticked", () => {
+  const header = ["#", "No", "No.", "S/N", "Sno", "SrNo", "RowNumber", "Unnamed: 0.1", "index", "idx", "row_index",
+    "IDNumber", "id_number", "customer_no", "account_number", "AccountNo", "roll_no", "emp_no",
+    "order_number", "ticket_no", "UID", "uid", "user_uid", "mobile", "mobile_no", "telephone",
+    "contact_number", "pin", "PIN"];
+  assert.deepStrictEqual(ticks(header), header.map((name) => [name, false]));
+});
+
+test("measures whose names contain an id-like word stay ticked", () => {
+  const header = ["paid", "valid", "video", "grid", "solid", "android", "width", "bid", "kid_count",
+    "isPaid", "amountPaid", "Lipid", "avgHumidity", "phone_minutes", "amount", "kids",
+    "number_of_visits", "num_items", "pin_count", "price_index", "uv_index", "UVIndex", "gini_index",
+    "happiness_index", "BodyMassIndex", "Index"];
+  assert.deepStrictEqual(ticks(header), header.map((name) => [name, true]));
+});
+
 test("uploads above the size cap are refused before they are read", () => {
   assert.strictEqual(uploadSizeError(MAX_UPLOAD_BYTES), null);
-  assert.match(uploadSizeError(MAX_UPLOAD_BYTES + 1), /20 MB/);
-  assert.match(uploadSizeError(100 * 1024 * 1024), /100 MB/);
+  assert.match(uploadSizeError(100 * 1024 * 1024), /^That file is 100 MB\..* capped at 20 MB /);
+});
+
+test("a file just over the cap reads as over it, not as the cap itself", () => {
+  const kb = 1024;
+  for (const [bytes, shown] of [[MAX_UPLOAD_BYTES + 1, "20.1"], [MAX_UPLOAD_BYTES + 400 * kb, "20.4"],
+    [MAX_UPLOAD_BYTES + 460 * kb, "20.5"], [MAX_UPLOAD_BYTES + 1024 * kb - 1, "21"]]) {
+    assert.ok(uploadSizeError(bytes).startsWith(`That file is ${shown} MB.`), `${bytes}: ${uploadSizeError(bytes)}`);
+  }
+});
+
+test("NA, NaN, null, ? and - are missing values like a blank, not text", () => {
+  for (const marker of ["NA", "N/A", "NaN", "nan", "null", "NULL", "?", "-", " na "]) {
+    const rows = table(["a", "b"], (i, c) => (c === 1 && i === 5 ? marker : String(i - c * 10)));
+    const cols = numericColumns(rows);
+    assert.deepStrictEqual(cols.map((c) => c.name), ["a", "b"], marker);
+    const m = matrix(rows, cols);
+    assert.strictEqual(m.length, 59, marker);
+    assert.ok(!m.some(([a]) => a === 5), marker);
+  }
+});
+
+test("a lone - is missing but -5 is a number", () => {
+  assert.strictEqual(toNumber("-5"), -5);
+  assert.ok(Number.isNaN(toNumber("-")));
+  const rows = [["x", "y"], ...Array.from({ length: 10 }, (_, i) => [i === 2 ? "-" : `-${i + 1}`, String(i)])];
+  const cols = numericColumns(rows);
+  assert.deepStrictEqual(cols.map((c) => c.name), ["x", "y"]);
+  assert.deepStrictEqual(matrix(rows, cols).map(([x]) => x), [-1, -2, -4, -5, -6, -7, -8, -9, -10]);
+});
+
+test("text that is not a missing marker still hides a column", () => {
+  const rows = table(["a", "b"], (i, c) => (c === 1 && i === 5 ? "none of it" : String(i)));
+  assert.deepStrictEqual(numericColumns(rows).map((c) => c.name), ["a"]);
 });

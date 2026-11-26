@@ -38,7 +38,7 @@ export default function Lab({ datasets }) {
     return {
       title: upload.name,
       note: `${rows.length} rows, ${chosen.length} numeric columns, standardised.`
-        + (skipped ? ` Rows left out for a blank or non-numeric cell in a chosen column: ${skipped}.` : ""),
+        + (skipped ? ` Rows left out for a missing or non-numeric cell in a chosen column: ${skipped}.` : ""),
       columns: chosen.map((c) => c.name),
       X: standardise(rows),
     };

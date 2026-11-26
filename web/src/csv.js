@@ -13,7 +13,10 @@
 // the browser to kill the tab, and sooner on a phone.
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
-const megabytes = (bytes) => Math.round(bytes / (1024 * 1024));
+// Rounded up to a tenth so a file just over the cap never reads as the cap
+// itself ("20 MB ... capped at 20 MB"). Multiplying before dividing by a
+// power of two keeps whole byte counts exact.
+const megabytes = (bytes) => Math.ceil((bytes * 10) / (1024 * 1024)) / 10;
 
 /** Why a file of this size is refused, or null when it can be read. */
 export function uploadSizeError(bytes) {
@@ -79,32 +82,49 @@ export function toNumber(cell) {
   return Number.isFinite(value) ? value : NaN;
 }
 
-const isBlank = (cell) => cell === undefined || String(cell).trim() === "";
+// What R (NA), pandas (NaN), databases (null) and hand-kept sheets ("?", "-")
+// write for an empty cell. Read as text, one of them in the sample hid the
+// whole column.
+const MISSING_MARKERS = new Set(["", "na", "n/a", "nan", "null", "?", "-"]);
+
+const isMissing = (cell) => cell === undefined || MISSING_MARKERS.has(String(cell).trim().toLowerCase());
 
 // Columns that are numeric but are labels, not measurements. Clustering on a
 // row id or a postcode finds structure in how the file was numbered. Names
-// are split into words (snake_case, camelCase, "S.No") so that "userId" is
-// an id but "paid" and "valid" are not.
-const IDENTIFIER_WORDS = new Set(["id", "uuid", "guid", "index", "zip", "zipcode", "postcode",
-  "postalcode", "pincode", "phone", "phoneno", "phonenumber"]);
-const SERIAL_NUMBER = /^(s|sr|sl|serial|row) ?(no|num|number)$|^serial$/;
+// are split into words (snake_case, camelCase, "IDNumber", "S.No") so that
+// "userId" is an id but "paid", "valid" and "Lipid" are not. Only the last
+// word names what a column holds: "pin" is a PIN code, "pin_count" a measure.
+const IDENTIFIER_WORDS = new Set(["id", "uid", "uuid", "guid", "zip", "zipcode", "postcode",
+  "postalcode", "pin", "pincode", "phone", "phonenumber", "mobile", "telephone"]);
+// "customer_no", "account_number", "No." and "IDNumber" are numbers that
+// label a row; a measure names what it counts last ("number_of_visits").
+const NUMBER_WORDS = new Set(["no", "nr", "num", "number"]);
+const SERIAL_NUMBER = /^((s|sr|sl|serial|row)(n|no|nr|num|number)|serial)$/;
+// "price_index" and "BodyMassIndex" are measures, so index counts only as the
+// whole name. pandas' reset_index() writes a lowercase "index"; a capitalised
+// "Index" is as likely a score, so case matters for the bare word.
+const isRowIndex = (raw, words) => raw === "index" || raw === "idx" || /^row (index|idx)$/.test(words.join(" "));
 
 function looksLikeIdentifier(header) {
   const raw = header.trim();
-  // A blank header or pandas' "Unnamed: 0" is an index written out by
-  // to_csv() without index=False.
-  if (raw === "" || /^unnamed: ?\d+$/i.test(raw)) return true;
-  const words = raw.replace(/([a-z\d])([A-Z])/g, "$1 $2").toLowerCase().split(/[^a-z\d]+/).filter(Boolean);
-  const last = words.at(-1) ?? "";
-  return IDENTIFIER_WORDS.has(last)
+  // A blank header or pandas' "Unnamed: 0" (or "Unnamed: 0.1" once such a
+  // file is read and written again) is an index written by to_csv().
+  if (raw === "" || /^unnamed: ?\d+(\.\d+)?$/i.test(raw)) return true;
+  const words = raw.replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2").replace(/([a-z\d])([A-Z])/g, "$1 $2")
+    .toLowerCase().split(/[^a-z\d]+/).filter(Boolean);
+  // A header of punctuation only, such as "#", is a row number.
+  if (words.length === 0) return true;
+  const last = words.at(-1);
+  return isRowIndex(raw, words) || IDENTIFIER_WORDS.has(last) || NUMBER_WORDS.has(last)
     || IDENTIFIER_WORDS.has(words.slice(-2).join(""))
-    || SERIAL_NUMBER.test(words.join(" "));
+    || SERIAL_NUMBER.test(words.join(""));
 }
 
 /**
  * The numeric columns of a parsed CSV, each marked with whether it should be
- * included by default. Blank cells are missing values, so a column counts as
- * numeric when every filled cell in the sample is a number, provided at
+ * included by default. Blank cells and markers such as NA are missing values,
+ * so a column counts as numeric when every filled cell in the sample is a
+ * number, provided at
  * least half the sample is filled; a mostly empty column would cost most of
  * the rows if ticked.
  */
@@ -116,15 +136,15 @@ export function numericColumns(rows) {
       name: name.trim() || `column ${index + 1}`, index, include: !looksLikeIdentifier(name),
     }))
     .filter(({ index }) => {
-      const filled = sample.map((r) => r[index]).filter((cell) => !isBlank(cell));
+      const filled = sample.map((r) => r[index]).filter((cell) => !isMissing(cell));
       return filled.length > 0 && filled.length * 2 >= sample.length
         && filled.every((cell) => !Number.isNaN(toNumber(cell)));
     });
 }
 
 /**
- * The rows complete in every chosen column, as numbers. A row with a blank or
- * non-numeric cell in any chosen column is left out rather than imputed.
+ * The rows complete in every chosen column, as numbers. A row with a missing
+ * or non-numeric cell in any chosen column is left out rather than imputed.
  */
 export function matrix(rows, columns) {
   return rows.slice(1)
