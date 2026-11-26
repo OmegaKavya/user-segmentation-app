@@ -94,11 +94,14 @@ const isMissing = (cell) => cell === undefined || MISSING_MARKERS.has(String(cel
 // are split into words (snake_case, camelCase, "IDNumber", "S.No") so that
 // "userId" is an id but "paid", "valid" and "Lipid" are not. Only the last
 // word names what a column holds: "pin" is a PIN code, "pin_count" a measure.
+// The one exception is a leading "id" or "uid", as in "id_user" or
+// "ID_Customer", which names the column for the id before it says whose.
 const IDENTIFIER_WORDS = new Set(["id", "uid", "uuid", "guid", "zip", "zipcode", "postcode",
   "postalcode", "pin", "pincode", "phone", "phonenumber", "mobile", "telephone"]);
 // "customer_no", "account_number", "No." and "IDNumber" are numbers that
 // label a row; a measure names what it counts last ("number_of_visits").
 const NUMBER_WORDS = new Set(["no", "nr", "num", "number"]);
+const LEADING_ID_WORDS = new Set(["id", "uid"]);
 const SERIAL_NUMBER = /^((s|sr|sl|serial|row)(n|no|nr|num|number)|serial)$/;
 // "price_index" and "BodyMassIndex" are measures, so index counts only as the
 // whole name. pandas' reset_index() writes a lowercase "index"; a capitalised
@@ -116,6 +119,7 @@ function looksLikeIdentifier(header) {
   if (words.length === 0) return true;
   const last = words.at(-1);
   return isRowIndex(raw, words) || IDENTIFIER_WORDS.has(last) || NUMBER_WORDS.has(last)
+    || LEADING_ID_WORDS.has(words[0])
     || IDENTIFIER_WORDS.has(words.slice(-2).join(""))
     || SERIAL_NUMBER.test(words.join(""));
 }

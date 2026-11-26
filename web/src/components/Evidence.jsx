@@ -1,7 +1,7 @@
 import React from "react";
 import "./Evidence.css";
 
-const fmt = (v, n = 3) => (v === null || v === undefined ? "—" : v.toFixed(n));
+const fmt = (v, n = 3) => (v === null || v === undefined ? "n/a" : v.toFixed(n));
 
 // Conventional reading of the adjusted Rand index. Stated as a convention
 // rather than a test, because it is one.

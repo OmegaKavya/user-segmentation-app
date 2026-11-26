@@ -10,6 +10,11 @@ import { gapStatistic, stability, byAlgorithm } from "./methods.js";
 // The heavy tests are quadratic in the number of points. Five hundred is far
 // more than enough to answer a yes or no, and keeps the whole run in seconds.
 const HEAVY_LIMIT = 500;
+// The permutation test is linear in the rows, since its silhouette samples
+// 400, but it runs 217 clusterings: on a 100,000 row upload that is minutes
+// of a stalled tab. Two thousand keeps both built-in datasets whole, so
+// their results are exactly those the page has always shown.
+const PERMUTATION_LIMIT = 2000;
 
 function subsample(X, limit, seed = 42) {
   if (X.length <= limit) return X;
@@ -27,11 +32,16 @@ self.onmessage = (event) => {
   try {
     const post = (type, payload) => self.postMessage({ type, ...payload });
 
-    post("stage", { stage: "permutation" });
-    post("permutation", { result: assess(X, { ks, repeats }) });
-
+    // Same seed and shuffle, so every point in the smaller sample is in the larger.
+    const P = subsample(X, PERMUTATION_LIMIT);
     const S = subsample(X, HEAVY_LIMIT);
-    post("stage", { stage: "gap", sampled: S.length < X.length ? S.length : null });
+    const size = (sample) => (sample.length < X.length ? sample.length : null);
+    // Sent before the first result, so the verdict never appears to cover
+    // rows it did not see.
+    post("stage", { stage: "permutation", sampled: { permutation: size(P), evidence: size(S) } });
+    post("permutation", { result: assess(P, { ks, repeats }) });
+
+    post("stage", { stage: "gap" });
     post("gap", { result: gapStatistic(S, ks, 42, 10) });
 
     post("stage", { stage: "algorithms" });

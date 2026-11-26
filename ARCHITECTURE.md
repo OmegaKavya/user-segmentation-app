@@ -104,7 +104,11 @@ methods found nothing beyond chance", not "this data has no structure".
 
 The heavy tests run on a 500 point subsample when the data is larger, since
 silhouette and Ward linkage are both quadratic. That is ample for a yes or no
-and keeps the whole run under ten seconds.
+and keeps the whole run under ten seconds. The permutation test is linear in
+the rows but clusters them 217 times, so above 2,000 rows it runs on a seeded
+sample of 2,000 (the 500 are drawn from within it), and the page says so
+before the verdict arrives. Both built-in datasets are under 2,000 rows and
+are tested whole.
 
 ## Verification
 

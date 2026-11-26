@@ -157,7 +157,12 @@ export default function Lab({ datasets }) {
       )}
       {key === "custom" && custom?.error && <p className="lab-error" role="alert">{custom.error}</p>}
 
-      {active && <p className="lab-about">{active.note}</p>}
+      {active && (
+        <p className="lab-about">
+          {active.note}
+          {state.sampled?.permutation && ` The permutation test runs on a random ${state.sampled.permutation} of these rows, which is ample for the answer and keeps the run to seconds.`}
+        </p>
+      )}
 
       {state.status === "running" && (
         <p className="lab-running" role="status">
@@ -177,7 +182,7 @@ export default function Lab({ datasets }) {
             The test above compares against a null with no structure. These ask
             different questions, so agreement between them means more than any
             one of them alone.
-            {state.sampled && ` Computed on a ${state.sampled} point sample, which is ample for the answer and keeps the run to seconds.`}
+            {state.sampled?.evidence && ` Computed on a ${state.sampled.evidence} point sample, which is ample for the answer and keeps the run to seconds.`}
           </p>
           <div className="evidence-grid">
             <Gap gap={state.gap} />

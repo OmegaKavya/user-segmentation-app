@@ -78,11 +78,17 @@ test("row numbers, account numbers and contact columns start unticked", () => {
   assert.deepStrictEqual(ticks(header), header.map((name) => [name, false]));
 });
 
+test("a name that starts with id or uid is an id", () => {
+  const header = ["id_user", "ID_Customer", "id-number", "Id User", "uid_device", "UID-Account"];
+  assert.deepStrictEqual(ticks(header), header.map((name) => [name, false]));
+});
+
 test("measures whose names contain an id-like word stay ticked", () => {
   const header = ["paid", "valid", "video", "grid", "solid", "android", "width", "bid", "kid_count",
     "isPaid", "amountPaid", "Lipid", "avgHumidity", "phone_minutes", "amount", "kids",
     "number_of_visits", "num_items", "pin_count", "price_index", "uv_index", "UVIndex", "gini_index",
-    "happiness_index", "BodyMassIndex", "Index"];
+    "happiness_index", "BodyMassIndex", "Index", "idle_time", "ideal_weight", "identity_score", "IdleTime",
+    "idx_score", "uids_seen", "fluid_intake", "Idea Count"];
   assert.deepStrictEqual(ticks(header), header.map((name) => [name, true]));
 });
 
