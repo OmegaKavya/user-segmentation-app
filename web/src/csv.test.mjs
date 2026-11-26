@@ -83,6 +83,23 @@ test("a name that starts with id or uid is an id", () => {
   assert.deepStrictEqual(ticks(header), header.map((name) => [name, false]));
 });
 
+test("a name that starts with id but ends in a measure is a measure", () => {
+  const header = ["id_count", "ID Count", "uid_count", "ID Card Count", "ID Score", "id_score", "ID_Weight",
+    "id_total", "IdAvg", "id_number_of_visits"];
+  assert.deepStrictEqual(ticks(header), header.map((name) => [name, true]));
+});
+
+test("a week, month or version number is a measure, not a row label", () => {
+  const header = ["Week Number", "Month Number", "week_num", "day_number", "Version Number", "WeekNo",
+    "year_no", "Week #", "# of visits"];
+  assert.deepStrictEqual(ticks(header), header.map((name) => [name, true]));
+});
+
+test("a bare row or sequence column, and a number written with #, is an id", () => {
+  const header = ["Row", "row", "seq", "Seq", "SeqNo", "Cust#", "Item #", "Order#"];
+  assert.deepStrictEqual(ticks(header), header.map((name) => [name, false]));
+});
+
 test("measures whose names contain an id-like word stay ticked", () => {
   const header = ["paid", "valid", "video", "grid", "solid", "android", "width", "bid", "kid_count",
     "isPaid", "amountPaid", "Lipid", "avgHumidity", "phone_minutes", "amount", "kids",
@@ -105,8 +122,9 @@ test("a file just over the cap reads as over it, not as the cap itself", () => {
   }
 });
 
-test("NA, NaN, null, ? and - are missing values like a blank, not text", () => {
-  for (const marker of ["NA", "N/A", "NaN", "nan", "null", "NULL", "?", "-", " na "]) {
+test("NA, NaN, null, #N/A, None, n.a., ?, - and . are missing values like a blank, not text", () => {
+  for (const marker of ["NA", "N/A", "NaN", "nan", "null", "NULL", "?", "-", " na ", "#N/A", "None", "n.a.",
+    "N.A.", "."]) {
     const rows = table(["a", "b"], (i, c) => (c === 1 && i === 5 ? marker : String(i - c * 10)));
     const cols = numericColumns(rows);
     assert.deepStrictEqual(cols.map((c) => c.name), ["a", "b"], marker);
@@ -123,6 +141,15 @@ test("a lone - is missing but -5 is a number", () => {
   const cols = numericColumns(rows);
   assert.deepStrictEqual(cols.map((c) => c.name), ["x", "y"]);
   assert.deepStrictEqual(matrix(rows, cols).map(([x]) => x), [-1, -2, -4, -5, -6, -7, -8, -9, -10]);
+});
+
+test("a lone . is missing but .5 is a number", () => {
+  assert.strictEqual(toNumber(".5"), 0.5);
+  assert.ok(Number.isNaN(toNumber(".")));
+  const rows = [["x", "y"], ...Array.from({ length: 10 }, (_, i) => [i === 2 ? "." : `.${i + 1}`, String(i)])];
+  const cols = numericColumns(rows);
+  assert.deepStrictEqual(cols.map((c) => c.name), ["x", "y"]);
+  assert.deepStrictEqual(matrix(rows, cols).map(([x]) => x), [0.1, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.1]);
 });
 
 test("text that is not a missing marker still hides a column", () => {

@@ -82,10 +82,11 @@ export function toNumber(cell) {
   return Number.isFinite(value) ? value : NaN;
 }
 
-// What R (NA), pandas (NaN), databases (null) and hand-kept sheets ("?", "-")
-// write for an empty cell. Read as text, one of them in the sample hid the
-// whole column.
-const MISSING_MARKERS = new Set(["", "na", "n/a", "nan", "null", "?", "-"]);
+// What R (NA), pandas (NaN), databases (null), Excel (#N/A), Python (None)
+// and hand-kept sheets ("?", "-", ".", "n.a.") write for an empty cell. Read
+// as text, one of them in the sample hid the whole column. Matched whole, so
+// "-5" and ".5" are still numbers.
+const MISSING_MARKERS = new Set(["", "na", "n/a", "n.a.", "#n/a", "nan", "null", "none", "?", "-", "."]);
 
 const isMissing = (cell) => cell === undefined || MISSING_MARKERS.has(String(cell).trim().toLowerCase());
 
@@ -95,14 +96,21 @@ const isMissing = (cell) => cell === undefined || MISSING_MARKERS.has(String(cel
 // "userId" is an id but "paid", "valid" and "Lipid" are not. Only the last
 // word names what a column holds: "pin" is a PIN code, "pin_count" a measure.
 // The one exception is a leading "id" or "uid", as in "id_user" or
-// "ID_Customer", which names the column for the id before it says whose.
+// "ID_Customer", which names the column for the id before it says whose,
+// unless the last word still names a measure, as in "id_count" or "ID Score".
 const IDENTIFIER_WORDS = new Set(["id", "uid", "uuid", "guid", "zip", "zipcode", "postcode",
   "postalcode", "pin", "pincode", "phone", "phonenumber", "mobile", "telephone"]);
 // "customer_no", "account_number", "No." and "IDNumber" are numbers that
 // label a row; a measure names what it counts last ("number_of_visits").
 const NUMBER_WORDS = new Set(["no", "nr", "num", "number"]);
+// A week, month or version number is ordered and spaced like a measure, so
+// "Week Number" and "version_no" stay ticked.
+const ORDINAL_STEMS = new Set(["second", "minute", "hour", "day", "week", "month", "quarter", "year",
+  "version", "ver", "release", "revision", "rev"]);
 const LEADING_ID_WORDS = new Set(["id", "uid"]);
-const SERIAL_NUMBER = /^((s|sr|sl|serial|row)(n|no|nr|num|number)|serial)$/;
+const MEASURE_WORDS = new Set(["count", "score", "weight", "total", "sum", "rate", "amount", "avg",
+  "average", "mean"]);
+const SERIAL_NUMBER = /^((s|sr|sl|serial|row|seq)(n|no|nr|num|number)|serial|seq|row)$/;
 // "price_index" and "BodyMassIndex" are measures, so index counts only as the
 // whole name. pandas' reset_index() writes a lowercase "index"; a capitalised
 // "Index" is as likely a score, so case matters for the bare word.
@@ -113,13 +121,18 @@ function looksLikeIdentifier(header) {
   // A blank header or pandas' "Unnamed: 0" (or "Unnamed: 0.1" once such a
   // file is read and written again) is an index written by to_csv().
   if (raw === "" || /^unnamed: ?\d+(\.\d+)?$/i.test(raw)) return true;
-  const words = raw.replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2").replace(/([a-z\d])([A-Z])/g, "$1 $2")
+  // "#" reads as "no", so "Cust#" and "Item #" are numbers that label a row
+  // and "# of visits" is a count, by the same rules as the words.
+  const words = raw.replace(/#/g, " no ")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2").replace(/([a-z\d])([A-Z])/g, "$1 $2")
     .toLowerCase().split(/[^a-z\d]+/).filter(Boolean);
-  // A header of punctuation only, such as "#", is a row number.
+  // A header of other punctuation only is a row number too.
   if (words.length === 0) return true;
   const last = words.at(-1);
-  return isRowIndex(raw, words) || IDENTIFIER_WORDS.has(last) || NUMBER_WORDS.has(last)
-    || LEADING_ID_WORDS.has(words[0])
+  const countOf = words.some((w, i) => NUMBER_WORDS.has(w) && words[i + 1] === "of");
+  return isRowIndex(raw, words) || IDENTIFIER_WORDS.has(last)
+    || (NUMBER_WORDS.has(last) && !ORDINAL_STEMS.has(words.at(-2)))
+    || (LEADING_ID_WORDS.has(words[0]) && !MEASURE_WORDS.has(last) && !countOf)
     || IDENTIFIER_WORDS.has(words.slice(-2).join(""))
     || SERIAL_NUMBER.test(words.join(""));
 }
